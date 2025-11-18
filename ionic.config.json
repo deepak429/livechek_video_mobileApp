@@ -1,5 +1,7 @@
 {
-  "name": "app",
-  "integrations": {},
-  "type": "angular-standalone"
+  "name": "LiveChek",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
 }

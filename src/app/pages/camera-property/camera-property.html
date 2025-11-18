@@ -1,0 +1,151 @@
+<ion-content [hidden]='!show'>
+    <div *ngIf="!options">
+        <ion-grid *ngIf="picNo < docs.length" style="height:100%;width:100%; padding:0px;margin:0px;overflow:hidden;">
+            <ion-row>
+                <ion-col>
+                    <h3 *ngIf="preview">PREVIEW</h3>
+                    <h4 *ngIf="!preview">{{selectedImgTypes}}</h4>
+                </ion-col>
+            </ion-row>
+            <ion-row style="height:520px;width:100%;">
+                <ion-col [hidden]="preview" id="cam" style="margin:0%;padding:0%;overflow:hidden;">
+                    <img [hidden]="!buttonClicked || preview"
+                        [src]="docs[picNo].imageInstruction.sampleImage ? docs[picNo].imageInstruction.sampleImage : './assets/img/Livechek_text.png'"
+                        alt="" onError="this.src='./assets/img/Livechek_text.png';"
+                        style="margin:0px;width: 100%; min-width: 100%;height: 98%;min-height: 98%;">
+                    <img (error)="offlineStencil()" [hidden]="buttonClicked || !usingMediaCapture || preview" alt="" id="rotate90" src="">
+                    <video autoplay class="videoPlayer" [hidden]="buttonClicked || usingMediaCapture || preview" id="video" muted="true" height="520"
+                        width="100%" webkit-playsinline="webkit-playsinline"></video>
+                    <canvas style="display:none" #canvas id="canvas" height="720" width="720"></canvas>
+                    <ion-fab right top>
+                        <button color="light" ion-fab>
+                            <ion-icon name="md-arrow-dropleft"></ion-icon>
+                        </button>
+                        <ion-fab-list side="left">
+                            <button (click)="goBack()" ion-fab style="height:50px;width:50px;">
+                                <ion-icon name="md-arrow-round-back"></ion-icon>
+                            </button>
+                            <button (click)="flash=!flash;flashLight()" ion-fab style="height:50px;width:50px;">
+                                <ion-icon [color]="(flash)?'primary':'danger'" name="md-flash"></ion-icon>
+                            </button>
+                            <button (click)="close()" ion-fab style="height:50px;width:50px;">
+                                <ion-icon name="md-trash"></ion-icon>
+                            </button>
+                        </ion-fab-list>
+                    </ion-fab>
+                </ion-col>
+                <ion-col [hidden]="!preview"  style="background-color: black; background-size:cover;"
+                    style="margin:0%;padding:0%">
+                    <img [hidden]="buttonClicked" *ngIf="lastmedia == 'img'" alt="" id="previewPicture" src=""
+                        style="width:100%;height:520px; padding:0px; margin:0px">
+                    <video auto="false" class="videoPlayer" #previewVid id="previewVid" *ngIf="lastmedia == 'vid'" controls="controls" 
+                        height="520" webkit-playsinline="webkit-playsinline" width="100%">
+                        <source [src]="fullPath" type="video/mp4" />
+                    </video>
+                </ion-col>
+            </ion-row>
+            <ion-row style="width:100%;background-color: #ffffff; color: black;">
+                <ion-col col-8 *ngIf="!preview" >
+                    <p *ngIf="!preview && docs[picNo].imageInstruction && !recordStarted" style="font-weight: lighter;overflow:scroll;">
+                        {{user.language == 'english' ? docs[picNo].imageInstruction.text:(docs[picNo].imageInstruction['text_'+user.language]
+                            ? docs[picNo].imageInstruction['text_'+user.language] : docs[picNo].imageInstruction.text)}}
+                    </p>
+                    <div *ngIf="!preview && !recordStarted">
+                        <ion-row style="justify-content: center;">
+                            <div style="text-align: center;display: inline-block;width:49%">
+                                <button (click)="takePicture()" [disabled]=" buttonClicked " icon-only id="cameraButton" ion-button
+                                    style="width:50px; height: 50px; background-color:white;border:2px solid #488aff;color:#488aff;border-radius:50%;">
+                                    <ion-icon name="md-camera"></ion-icon>
+                                </button>
+                                <p style="font-size:16px;font-weight: lighter;color:#488aff;margin: 5px;"> Photo</p>
+                            </div>
+                            <div style="text-align: center;display: inline-block;width:49%">
+                                <button (click)="takeVideo()" [disabled]=" buttonClicked " icon-only id="cameraButton" ion-button
+                                    style="width:50px; height: 50px; background-color:white;border:2px solid #488aff;color:#488aff;border-radius:50%;">
+                                    <ion-icon name="md-videocam"></ion-icon>
+                                </button>
+                                <p style="font-size:16px;font-weight: lighter;color:#488aff;margin: 5px;"> Video</p>
+                            </div>
+                        </ion-row>
+                        <ion-row style="justify-content: center;">
+                            <a *ngIf="docs[picNo].skip" (click)="next(undefined)" id="skipButton" style="color:#228b22;margin: 5px;">Skip</a>
+                        </ion-row>
+                    </div>
+                    <div *ngIf="!preview && recordStarted">
+                        <ion-row style="justify-content: center;">
+                            
+                            <div style="text-align: center;display: inline-block;width:49%">
+                                <button (click)="stopRecording()" [disabled]="recordStopped " icon-only id="cameraButton" ion-button
+                                    style="width:50px; height: 50px; background-color:white;border:2px solid #488aff;color:#488aff;border-radius:50%;">
+                                    <ion-icon name="md-square"></ion-icon>
+                                </button>
+                            </div>
+                            <div *ngIf="recordStarted" style="text-align: center;width:49%">
+                                <p >{{recordTime.minutes}}:{{recordTime.seconds}}</p>
+                            </div>
+                            <div *ngIf="recordStopped" style="text-align: center;width:49%">
+                                <p>Please Wait</p>
+                            </div>
+                        </ion-row>
+                    </div>
+                </ion-col>
+                <ion-col col-4 *ngIf="!preview" >
+                    <div (click)="buttonClicked=!buttonClicked"
+                        style="position:absolute;right:0px;">
+                        <img [src]="docs[picNo] && docs[picNo].imageInstruction.sampleImage ? docs[picNo].imageInstruction.sampleImage : './assets/img/Livechek_text.png'"
+                            height="100px" max-height="100px" max-width="150px"
+                            onError="this.src='./assets/img/question.png';" width="150px">
+                    </div>
+                </ion-col>
+                <ion-col col-12 *ngIf="preview" >
+                    <p *ngIf="preview"
+                            style="position: absolute;bottom: 0px;margin-bottom: 0px; text-align: center;">
+                            {{data.getDate()< 10 ? '0'+data.getDate() :
+                            data.getDate()}}/{{(data.getMonth()+1) < 10? '0'+(data.getMonth()+1):
+                            (data.getMonth()+1)}}/{{data.getFullYear()}} |
+                            {{data.getHours()}}:{{data.getMinutes() < 10 ? '0'+ data.getMinutes() :
+                            data.getMinutes()}} </p>
+                    <button (click)="next(true)" *ngIf="docs[picNo].more" block ion-button medium style="background-color:white;border:2px solid #488aff;color:#488aff;">
+                        More 
+                    </button>
+                    <div style="text-align: center;display: inline-block;width:49%">
+                        <button (click)="takeAgain()" icon-only id="deleteButton" ion-button
+                            style="width:50px; height: 50px; border: 2px solid red;border-radius:50%;margin-right:10px;background-color: #ffffff;color: red;">
+                            <ion-icon name="md-close"></ion-icon>
+                        </button>
+                        <p style="font-size:18px;font-weight: lighter;color: red;margin-top: 5px;">Delete</p>
+                    </div>
+                    <div style="text-align: center;display: inline-block;width:49%">
+                        <button (click)="next(false)" [disabled]="nextClicked" icon-only id="okButton"
+                            ion-button
+                            style="width:50px; height: 50px; border: 2px solid #488aff;border-radius:50%;background-color: #ffffff;color:#488aff;">
+                            <ion-icon name="md-checkmark"></ion-icon>
+                        </button>
+                        <p style="font-size:18px;font-weight: lighter;color:#488aff;margin-top: 5px;"> Next</p>
+                    </div>
+                </ion-col>
+            </ion-row>
+        </ion-grid>
+    </div>
+</ion-content>
+<ion-content [hidden]='show'>
+    <ion-list [hidden]="docs.length > 1">
+        <ion-item>
+            <h5 style="text-align:center;">..</h5>
+        </ion-item>
+    </ion-list>
+    <div [hidden]="docs.length < 2" style="overflow-y:scroll;" >
+        <h4 style="text-align:center;color:#fff;padding: 10px;margin:0px;background-color:#488aff;">Select Section</h4>
+        <ion-list (click)="proceed(i)" *ngFor="let field of uniqueImgTypes;let i = index;" style="padding:0px;margin:0;">
+            <ion-item text-wrap>
+                <ion-label >
+                    {{user.language == 'english' ? sections[field][0].imageType : (sections[field][0]['imageType_'+user.language] ? 
+                        sections[field][0]['imageType_'+user.language] : sections[field][0].imageType)}}
+                </ion-label>
+            </ion-item>
+        </ion-list>
+        <button (tap)="nextPage()" block id='videoNext' ion-button
+            style="position: fixed; bottom:5px;left:0px;background-color:white;border:2px solid #488aff;color:#488aff;">Next
+        </button>
+    </div>
+</ion-content>

@@ -1,0 +1,44 @@
+<ion-content>
+
+  <!-- Initial UI -->
+  <div *ngIf="uiState === 'initial'">
+    <img class="placeholder-image" 
+         src="https://godreamcast.com/blog/wp-content/uploads/2024/02/What-is-Cloud-Video-Streaming-1024x694.jpg" />
+   <div class="timer-label">{{ instructionText }}...</div>
+  
+    <div class="timer-container">
+      <svg class="timer-svg" viewBox="0 0 100 100">
+        <circle class="timer-background" cx="50" cy="50" r="45"></circle>
+        <circle class="timer-progress" cx="50" cy="50" r="45"
+                [style.stroke-dashoffset]="calculateStrokeOffset()"></circle>
+      </svg>
+      
+      
+      <div class="timer-text">
+      
+        <div class="timer-countdown">{{ displayTime }}</div>
+        <div class="timer-status">Searching<span>.</span><span>.</span><span>.</span></div>
+      </div>
+    </div>
+    
+       
+    <ion-button expand="block" (click)="startRecording()">
+      <ion-icon name="videocam" slot="start"></ion-icon>
+      Start streaming
+    </ion-button>
+  </div>
+
+  
+  <!-- Web recording UI -->
+  <div *ngIf="uiState === 'recording'" class="video-container web-recording" >
+    <!-- <video #remoteVideo id="webVideo-customer" autoplay playsinline></video> -->
+    <video #webVideo id="webVideo" autoplay  playsinline></video>
+    <div class="recording-timer">
+      <span class="timer">{{ displayRecordingTime }}</span>
+    </div>
+    <div class="stop-button-container">
+      <ion-button color="danger" (click)="stopWebRecording()">Stop Streaming</ion-button>
+    </div>
+  </div>
+
+</ion-content>
