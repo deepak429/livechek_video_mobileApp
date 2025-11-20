@@ -25,11 +25,11 @@ export class VideoPage implements OnInit, OnDestroy {
 
 
   // A single state to manage the UI
-  uiState: 'initial' | 'recording' | 'preview' | 'completed' | 'failed' = 'initial';
+  uiState: 'initial' | 'searching' | 'recording' | 'completed' | 'failed' = 'initial';
   isWeb: boolean = false;
 
   // Timer
-  instructionText: string = 'Agent will be connect in';
+  instructionText: string = 'Click below to find an agent.';
   timer: number = 120;
   initialTimerValue: number = 120;
   displayTime: string = '02:00';
@@ -58,9 +58,6 @@ export class VideoPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.isWeb = !this.platform.is('hybrid');
-    this.startTimer();
-    this.setupSignaling();
-
     // Log device information when the page loads
     const deviceInfo = await Device.getInfo();
     console.log('Device info:', deviceInfo);
@@ -76,6 +73,13 @@ export class VideoPage implements OnInit, OnDestroy {
     if (this.socket) {
       this.socket.disconnect();
     }
+  }
+
+  async findAgent() {
+    this.uiState = 'searching';
+    this.instructionText = 'Searching for an agent...';
+    this.startTimer();
+    await this.setupSignaling();
   }
 
   startTimer() {
@@ -99,15 +103,24 @@ export class VideoPage implements OnInit, OnDestroy {
 
   setupSignaling() {
     // Connect to your signaling server. Use localhost for testing on the same machine.
-    this.socket = io('http://34.207.147.131:8080/');
+    // this.socket = io('http://34.207.147.131:8080/');
+    this.socket = io('https://peer.livechek.com/');
 
-    this.socket.on('connect', () => {
-      console.log('Sender connected to signaling server.');
-      // For demonstration, we'll use a fixed room ID that matches the agent's.
-      // In a real app, this would come from a URL parameter or API call.
-      this.roomId = '6874ba607e7d54bc279c12a5';
+
+    this.socket.on('connect', async () => {
+      console.log('Customer app connected to signaling server.');
+      // Generate a room ID and immediately send an inspection request.
+      this.roomId = `session_${Math.random().toString(36).substring(2, 9)}`;
+      console.log(`Generated new room ID: ${this.roomId}`);
+      const customerInfo = await Device.getInfo();
+      this.socket?.emit('new_inspection_request', { roomId: this.roomId, customerInfo });
+      console.log(`Sent new inspection request for room: ${this.roomId}`);
+      // Also join the room immediately after creating it.
       this.socket?.emit('join_room', { roomId: this.roomId });
-      console.log(`Attempting to join room: ${this.roomId}`);
+    });
+    this.socket.on('start_customer_stream', () => {
+      console.log('Agent accepted the request, starting stream.');
+      this.startRecording();
     });
 
     this.socket.on('signal', async (data) => {
@@ -143,7 +156,10 @@ export class VideoPage implements OnInit, OnDestroy {
       if (data.status === 'complete') {
         this.uiState = 'completed';
         this.instructionText = 'Call completed successfully.';
-      } else { // Covers 'failed' and 'exited'
+        this.stopWebStream();
+      } else if (data.status === 'exited') {
+        this.stopWebStream();
+      } else { // Covers 'failed'
         this.uiState = 'failed';
         this.instructionText = 'Call failed or was terminated.';
       }
@@ -154,6 +170,11 @@ export class VideoPage implements OnInit, OnDestroy {
       this.instructionText = 'Agent disconnected. Ready to start a new stream.';
       // Stop all streams and reset the UI to the initial state
       this.stopWebRecording();
+    });
+
+    this.socket.on('agent_reconnected', () => {
+      console.log('Agent has reconnected. Reloading the page to re-establish connection.');
+      window.location.reload();
     });
   }
 
@@ -226,8 +247,8 @@ async startRecording() {
 }
 
   stopWebRecording() {
+    this.socket?.emit('call_status', { roomId: this.roomId, status: 'exited' });
     this.stopWebStream(); // This will close connections and stop tracks
-    this.uiState = 'initial'; // Go back to the start screen
   }
 
   stopWebStream() {
@@ -246,6 +267,7 @@ async startRecording() {
     clearInterval(this.recordingInterval);
     this.recordingInterval = undefined;
     this.displayRecordingTime = '00:00';
+    this.uiState = 'initial'; // Always return to initial state
   }
 
   nextStep() {
@@ -261,5 +283,10 @@ async startRecording() {
     const radius = 45;
     const circumference = 2 * Math.PI * radius;
     return circumference - (this.timer / this.initialTimerValue) * circumference;
+  }
+
+  reconnect() {
+    // Simply reload the page for the cleanest state reset
+    window.location.reload();
   }
 }

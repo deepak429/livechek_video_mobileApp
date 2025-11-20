@@ -4,9 +4,17 @@
   <div *ngIf="uiState === 'initial'">
     <img class="placeholder-image" 
          src="https://godreamcast.com/blog/wp-content/uploads/2024/02/What-is-Cloud-Video-Streaming-1024x694.jpg" />
-   <div class="timer-label">{{ instructionText }}...</div>
+    <div class="start-button-wrapper">
+      <p class="info-text">{{ instructionText }}</p>
+      <ion-button expand="block" (click)="findAgent()">
+        <ion-icon name="search-outline" slot="start"></ion-icon>
+        Find Agent
+      </ion-button>
+    </div>
+  </div>
   
-    <div class="timer-container">
+  <div *ngIf="uiState === 'searching'">
+    <div class="timer-container" style="margin-top: 20vh;">
       <svg class="timer-svg" viewBox="0 0 100 100">
         <circle class="timer-background" cx="50" cy="50" r="45"></circle>
         <circle class="timer-progress" cx="50" cy="50" r="45"
@@ -15,17 +23,11 @@
       
       
       <div class="timer-text">
-      
+        <div class="timer-label">{{ instructionText }}</div>
         <div class="timer-countdown">{{ displayTime }}</div>
         <div class="timer-status">Searching<span>.</span><span>.</span><span>.</span></div>
       </div>
     </div>
-    
-       
-    <ion-button expand="block" (click)="startRecording()">
-      <ion-icon name="videocam" slot="start"></ion-icon>
-      Start streaming
-    </ion-button>
   </div>
 
   
@@ -41,4 +43,25 @@
     </div>
   </div>
 
+  <!-- Completed UI -->
+  <div *ngIf="uiState === 'completed'" class="completed-container">
+    <ion-icon name="checkmark-circle-outline" class="completed-icon"></ion-icon>
+    <h2>Call Completed</h2>
+    <p>{{ instructionText }}</p>
+    <ion-button (click)="reconnect()" expand="block">
+      <ion-icon name="refresh-outline" slot="start"></ion-icon>
+      Start New Session
+    </ion-button>
+  </div>
+
+  <!-- Failed UI -->
+  <div *ngIf="uiState === 'failed'" class="failed-container">
+    <ion-icon name="alert-circle-outline" class="failed-icon"></ion-icon>
+    <h2>Connection Failed</h2>
+    <p>{{ instructionText }}</p>
+    <ion-button (click)="reconnect()" expand="block">
+      <ion-icon name="refresh-outline" slot="start"></ion-icon>
+      Reconnect
+    </ion-button>
+  </div>
 </ion-content>
