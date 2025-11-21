@@ -49,10 +49,23 @@ export class VideoPage implements OnInit, OnDestroy {
   private iceCandidateQueue: RTCIceCandidateInit[] = [];
   private roomId: string | null = null; // To store the current room ID
   private peerConnectionConfig = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-    ]
-  };
+  iceServers: [
+    // Your TURN server
+    {
+      urls: 'turn:54.147.24.171:3478', // TURN server IP and port
+      username: 'testuser',            // TURN username
+      credential: 'MyVeryStrongSecretKey123!' // TURN password
+    },
+    // Optional TLS/DTLS TURN server
+    {
+      urls: 'turns:54.147.24.171:5349', // Secure TURN (TLS)
+      username: 'testuser',
+      credential: 'MyVeryStrongSecretKey123!'
+    },
+    // Public STUN server as fallback
+    { urls: 'stun:stun.l.google.com:19302' }
+  ]
+};
 
   constructor(private platform: Platform) {}
 
@@ -104,7 +117,7 @@ export class VideoPage implements OnInit, OnDestroy {
   setupSignaling() {
     // Connect to your signaling server. Use localhost for testing on the same machine.
     // this.socket = io('http://34.207.147.131:8080/');
-    this.socket = io('https://peer.livechek.com/');
+    this.socket = io('https://peer.dev.livechek.com/');
 
 
     this.socket.on('connect', async () => {
