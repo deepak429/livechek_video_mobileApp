@@ -24,8 +24,35 @@ step 4 : run the command to build the APK file
 ./gradlew assembleDebug
 ```
 
+Run on andriod Studio
+=====================
+
+```
+ionic build
+```
+
+===========
+
+```
+npx cap sync android
+```
+
+===========
+
+```
+npx cap open android
+```
+
 // build output path:
 /home/livechek/Downloads/LIVECHEK_mobile_App/livechekApp/android/app/build/outputs/apk/debug/app-debug.apk
-=======
+==========================================================================================================
+
 # livechek_video_mobileApp
+
 >>>>>>> origin/main
+>>>>>>>
+>>>>>>
+>>>>>
+>>>>
+>>>
+>>

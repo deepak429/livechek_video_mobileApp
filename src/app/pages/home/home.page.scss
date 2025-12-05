@@ -1,27 +1,68 @@
-#container {
+ion-header {
+  // Removes the translucent effect for a solid background
+  &::after {
+    display: none;
+  }
+}
+
+ion-toolbar {
+  --background: var(--ion-color-primary);
+  --color: var(--ion-color-primary-contrast); // Ensures text is readable on primary color
+  --min-height: 56px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+ion-content {
+  --background: #f4f5f8; // A light, clean background color
+
+  &::part(scroll) {
+    display: flex;
+    flex-direction: column;  // Stack children vertically
+    justify-content: center; // Center children vertically
+    align-items: center;     // Center children horizontally
+    height: 100%;
+  }
+}
+
+ion-title {
   text-align: center;
-
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  font-weight: 600;
+}
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 0 32px; // Add some horizontal padding
+  text-align: center;
+  width: 100%; // Ensure it takes full width for horizontal centering
+  max-width: 500px; // Optional: limit width on larger screens for better aesthetics
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
+.main-icon {
+  font-size: 6rem;
+  color: var(--ion-color-primary);
+  margin-bottom: 16px;
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-
-  color: #8c8c8c;
-
-  margin: 0;
+.welcome-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
-#container a {
-  text-decoration: none;
+.welcome-text {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 48px; // More space before the button
+}
+
+.start-button {
+  --border-radius: 50px;
+  height: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: none; // Softer look without all caps
 }

@@ -1,21 +1,23 @@
 ion-content {
-  --background: #fff; // Set a background color
+  --background: #f4f5f8; // Use a light grey background for a modern feel
 }
 
+// This ensures that the content of each UI state is centered on the screen.
 ion-content::part(scroll) {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  height: 100%;
+  width: 100%;
 }
 
 .placeholder-image {
-  // Center the image horizontally
   display: block;
   margin-left: auto;
   margin-right: auto;
-  margin-bottom: 20px;
-
+  margin-bottom: 1.5rem;
+  max-width: 280px; // Set a max-width for better control
 }
 
 .info-text {
@@ -23,45 +25,62 @@ ion-content::part(scroll) {
   font-size: 1.1rem;
   color: #333;
 }
-
-.video-border {
-  border: 3px solid #4c8dff;
-  padding: 10px;
-  border-radius: 12px;
-  margin: 10px;
-  background: #ffffff;
+.start-button-wrapper {
+  width: 100%;
+  padding: 0 24px;
+  box-sizing: border-box;
 }
+.timer-label {
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+/* Main container for the active call view */
 .video-container {
-  padding: 1px;
-  border: 1px solid #ffffff;
-  border-radius: 8px;
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
-.video-container video {
+
+/* Remote video from the agent, fills the screen */
+#remoteVideo {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* This will make the video fill the screen, cropping if necessary */
+  object-fit: cover;
 }
-.stop-button-container {
+
+/* Local video preview (picture-in-picture) */
+#webVideo {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 80px; /* Position above the controls overlay */
+  right: 16px;
+  width: 25%;
+  max-width: 120px;
+  height: auto;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
   z-index: 10;
 }
-.recording-timer {
+
+/* A semi-transparent bar at the bottom for all controls */
+.controls-overlay {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  background-color: rgba(0, 0, 0, 0.6);
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 20;
+}
+
+.recording-timer {
   color: white;
   padding: 5px 10px;
   border-radius: 8px;
@@ -118,10 +137,29 @@ ion-content::part(scroll) {
   font-size: 0.9rem;
   color: #6c757d;
   
+}/**
+ * A generic container for all non-video UI states.
+ * This ensures that each view is properly centered on the mobile screen.
+ */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
-
-timer-label {
-  font-size: 1.2rem;
-  color: #555;
-  margin-bottom: 15px;
+.completed-icon,
+.failed-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+.state-container h2 {
+  margin-bottom: 0.5rem;
+}
+.state-container p {
+  margin-bottom: 1.5rem;
 } 

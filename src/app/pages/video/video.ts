@@ -1,22 +1,26 @@
+import { Platform } from '@ionic/angular';
 import {
   Component,
   ElementRef,
   OnDestroy,
   OnInit,
-  ViewChild
+  ViewChild,
+  ChangeDetectorRef
 } from '@angular/core';
-import { IonicModule, Platform } from '@ionic/angular';
+import { IonContent, IonButton, IonIcon } from '@ionic/angular/standalone';
 import { CommonModule } from '@angular/common';
 import { Device } from '@capacitor/device';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { io, Socket } from 'socket.io-client';
+import { addIcons } from 'ionicons';
+import { searchOutline, checkmarkCircleOutline, refreshOutline, alertCircleOutline, cameraReverseOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-video',
   templateUrl: './video.html',
   styleUrls: ['./video.scss'],
   standalone: true,
-  imports: [IonicModule, CommonModule]
+  imports: [IonContent, IonButton, IonIcon, CommonModule]
 })
 export class VideoPage implements OnInit, OnDestroy {
 
@@ -42,32 +46,41 @@ export class VideoPage implements OnInit, OnDestroy {
   displayRecordingTime: string = '00:00';
   recordingInterval: any;
   isAgentMuted = false;
-  
+
+  // Camera swapping state
+  private videoDevices: MediaDeviceInfo[] = [];
+  private currentVideoDeviceIndex = 0;
+  canSwapCamera = false;
+
   // WebRTC and Signaling
   private socket: Socket | null = null;
   private peerConnection: RTCPeerConnection | null = null;
   private iceCandidateQueue: RTCIceCandidateInit[] = [];
   private roomId: string | null = null; // To store the current room ID
   private peerConnectionConfig = {
-  iceServers: [
-    // Your TURN server
-    {
-      urls: 'turn:54.147.24.171:3478', // TURN server IP and port
-      username: 'testuser',            // TURN username
-      credential: 'MyVeryStrongSecretKey123!' // TURN password
-    },
-    // Optional TLS/DTLS TURN server
-    {
-      urls: 'turns:54.147.24.171:5349', // Secure TURN (TLS)
-      username: 'testuser',
-      credential: 'MyVeryStrongSecretKey123!'
-    },
-    // Public STUN server as fallback
-    { urls: 'stun:stun.l.google.com:19302' }
-  ]
-};
+    iceServers: [
+      // Your TURN server
+      {
+        urls: [
+          "turn:13.204.172.255:3478?transport=udp",
+          "turn:13.204.172.255:3478?transport=tcp",
+          "turns:13.204.172.255:5349?transport=tcp"
+        ],
+        username: "testuser",
+        credential: "MyVeryStrongSecretKey123!"
+      }
+      // Optional TLS/DTLS TURN server
+      ,
+      // Public STUN server as fallback
+      { urls: 'stun:stun.l.google.com:19302' }
+    ]
+  };
 
-  constructor(private platform: Platform) {}
+
+
+  constructor(private platform: Platform, private cdr: ChangeDetectorRef) {
+    addIcons({ searchOutline, checkmarkCircleOutline, refreshOutline, alertCircleOutline, cameraReverseOutline });
+  }
 
   async ngOnInit() {
     this.isWeb = !this.platform.is('hybrid');
@@ -102,7 +115,7 @@ export class VideoPage implements OnInit, OnDestroy {
         this.timer--;
         const minutes = Math.floor(this.timer / 60);
         const seconds = this.timer % 60;
-        this.displayTime = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        this.displayTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       }
     }, 1000);
   }
@@ -134,6 +147,11 @@ export class VideoPage implements OnInit, OnDestroy {
     this.socket.on('start_customer_stream', () => {
       console.log('Agent accepted the request, starting stream.');
       this.startRecording();
+    });
+
+    this.socket.on('swap_camera_request', () => {
+      console.log('Received request from agent to swap camera.');
+      this.swapCamera();
     });
 
     this.socket.on('signal', async (data) => {
@@ -191,73 +209,135 @@ export class VideoPage implements OnInit, OnDestroy {
     });
   }
 
-async startRecording() {
-  // Lock the screen to landscape mode when recording starts
-  if (this.platform.is('mobile')) {
-    try {
-      await ScreenOrientation.lock({ orientation: 'landscape-primary' });
-    } catch (e) { console.error('Screen lock failed:', e); }
-  }
-
-  this.stopInitialTimer();
-  this.uiState = 'recording';
-
-  // Use getUserMedia for both web and mobile for a consistent live stream
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    this.webStream = stream;
-
-    // --- Start WebRTC Streaming Logic ---
-    this.peerConnection = new RTCPeerConnection(this.peerConnectionConfig);
-
-    // Set up the event handler for when network candidates are found
-    this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        this.socket?.emit('signal', { roomId: this.roomId, candidate: event.candidate });
-      }
-    };
-
-    // Add the local camera stream tracks to the connection to be sent
-    stream.getTracks().forEach(track => {
-      this.peerConnection?.addTrack(track, stream);
-    });
-
-    // --- RECEIVE AGENT'S AUDIO AND VIDEO ---
-    // When the remote tracks come from the agent, add them to our stream.
-    this.peerConnection.ontrack = (event) => {
-      console.log('Remote track received from agent:', event.track, event.streams);
-      // When the agent's stream arrives, display it in the remoteVideo element.
-      if (this.remoteVideoEl?.nativeElement) {
-        this.remoteVideoEl.nativeElement.srcObject = event.streams[0];
-      }
-    };
-
-    // Create the offer and send it to the agent
-    const offer = await this.peerConnection.createOffer();
-    await this.peerConnection.setLocalDescription(offer);
-    this.socket?.emit('signal', { roomId: this.roomId, offer });
-
-    // Notify the agent that the customer has started the inspection
-    this.socket?.emit('inspection_started', { roomId: this.roomId });
-
-    // Display the local camera stream in the #webVideo element (picture-in-picture)
-    if (this.webVideoEl?.nativeElement) {
-      this.webVideoEl.nativeElement.srcObject = stream;
+  async startRecording() {
+    // Lock the screen to landscape mode when recording starts
+    if (this.platform.is('mobile')) {
+      try {
+        await ScreenOrientation.lock({ orientation: 'landscape-primary' });
+      } catch (e) { console.error('Screen lock failed:', e); }
     }
 
-    // Start the recording timer
-    this.recordingTime = 0;
-    this.recordingInterval = setInterval(() => {
-      this.recordingTime++;
-      const minutes = Math.floor(this.recordingTime / 60);
-      const seconds = this.recordingTime % 60;
-      this.displayRecordingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }, 1000);
-  } catch (err) {
-    console.error('Camera error', err);
-    this.uiState = 'initial'; // Go back to initial state on error
+    this.stopInitialTimer();
+    this.uiState = 'recording';
+
+    // Use getUserMedia for both web and mobile for a consistent live stream
+    try {
+      // On mobile, prefer the back camera ('environment'). On web, use the default.
+      const videoConstraints: MediaTrackConstraints = this.platform.is('mobile')
+        ? { facingMode: 'environment' }
+        : {};
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      // Enumerate devices for camera swapping
+      this.videoDevices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+      this.canSwapCamera = this.videoDevices.length > 1;
+
+      this.webStream = stream;
+
+      // --- Start WebRTC Streaming Logic ---
+      this.peerConnection = new RTCPeerConnection(this.peerConnectionConfig);
+
+      // Set up the event handler for when network candidates are found
+      this.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          this.socket?.emit('signal', { roomId: this.roomId, candidate: event.candidate });
+        }
+      };
+
+      // Add the local camera stream tracks to the connection to be sent
+      stream.getTracks().forEach(track => {
+        this.peerConnection?.addTrack(track, stream);
+      });
+
+      // --- RECEIVE AGENT'S AUDIO AND VIDEO ---
+      // When the remote tracks come from the agent, add them to our stream.
+      this.peerConnection.ontrack = (event) => {
+        console.log('Remote track received from agent:', event.track, event.streams);
+        // When the agent's stream arrives, display it in the #webVideo element (picture-in-picture).
+        if (this.webVideoEl?.nativeElement) {
+          this.webVideoEl.nativeElement.srcObject = event.streams[0];
+          // Ensure the remote video element is not muted to hear the agent
+          this.webVideoEl.nativeElement.muted = false;
+          this.webVideoEl.nativeElement.volume = 1.0;
+        }
+      };
+
+      // Create the offer and send it to the agent
+      const offer = await this.peerConnection.createOffer();
+      await this.peerConnection.setLocalDescription(offer);
+      this.socket?.emit('signal', { roomId: this.roomId, offer: offer });
+
+      // Notify the agent that the customer has started the inspection
+      this.socket?.emit('inspection_started', { roomId: this.roomId });
+
+      // Display the local camera stream in the #remoteVideo element (main view)
+      if (this.remoteVideoEl?.nativeElement) {
+        this.remoteVideoEl.nativeElement.srcObject = stream;
+        this.remoteVideoEl.nativeElement.muted = true;
+      }
+
+      // Start the recording timer
+      this.recordingTime = 0;
+      this.recordingInterval = setInterval(() => {
+        this.recordingTime++;
+        const minutes = Math.floor(this.recordingTime / 60);
+        const seconds = this.recordingTime % 60;
+        this.displayRecordingTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        this.cdr.detectChanges();
+      }, 1000);
+    } catch (err) {
+      console.error('Camera error', err);
+      this.uiState = 'initial'; // Go back to initial state on error
+    }
   }
-}
+
+  async swapCamera() {
+    if (!this.webStream || !this.canSwapCamera) {
+      console.warn('Camera swapping not available.');
+      return;
+    }
+
+    // Stop the current video track to release the camera
+    this.webStream.getVideoTracks()[0].stop();
+
+    // Cycle to the next available video device
+    this.currentVideoDeviceIndex = (this.currentVideoDeviceIndex + 1) % this.videoDevices.length;
+    const nextDeviceId = this.videoDevices[this.currentVideoDeviceIndex].deviceId;
+
+    // Get the new video stream from the next camera
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: nextDeviceId } },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    const newVideoTrack = newStream.getVideoTracks()[0];
+
+    // Find the video sender in the peer connection and replace its track
+    const sender = this.peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+    if (sender) {
+      await sender.replaceTrack(newVideoTrack);
+    }
+
+    // Update the local preview element to show the new camera feed
+    if (this.remoteVideoEl?.nativeElement) {
+      this.remoteVideoEl.nativeElement.srcObject = newStream;
+      this.remoteVideoEl.nativeElement.muted = true;
+    }
+
+    this.webStream = newStream; // Update the local stream reference
+  }
 
   stopWebRecording() {
     this.socket?.emit('call_status', { roomId: this.roomId, status: 'exited' });

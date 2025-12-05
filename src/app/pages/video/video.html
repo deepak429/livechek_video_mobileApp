@@ -1,19 +1,19 @@
 <ion-content>
 
   <!-- Initial UI -->
-  <div *ngIf="uiState === 'initial'">
+  <div *ngIf="uiState === 'initial'" class="state-container initial-container">
     <img class="placeholder-image" 
          src="https://godreamcast.com/blog/wp-content/uploads/2024/02/What-is-Cloud-Video-Streaming-1024x694.jpg" />
     <div class="start-button-wrapper">
       <p class="info-text">{{ instructionText }}</p>
       <ion-button expand="block" (click)="findAgent()">
         <ion-icon name="search-outline" slot="start"></ion-icon>
-        Find Agent
+        Find Agents
       </ion-button>
     </div>
   </div>
   
-  <div *ngIf="uiState === 'searching'">
+  <div *ngIf="uiState === 'searching'" class="state-container searching-container">
     <div class="timer-container" style="margin-top: 20vh;">
       <svg class="timer-svg" viewBox="0 0 100 100">
         <circle class="timer-background" cx="50" cy="50" r="45"></circle>
@@ -23,7 +23,7 @@
       
       
       <div class="timer-text">
-        <div class="timer-label">{{ instructionText }}</div>
+
         <div class="timer-countdown">{{ displayTime }}</div>
         <div class="timer-status">Searching<span>.</span><span>.</span><span>.</span></div>
       </div>
@@ -33,18 +33,25 @@
   
   <!-- Web recording UI -->
   <div *ngIf="uiState === 'recording'" class="video-container web-recording" >
-    <!-- <video #remoteVideo id="webVideo-customer" autoplay playsinline></video> -->
-    <video #webVideo id="webVideo" autoplay  playsinline></video>
-    <div class="recording-timer">
-      <span class="timer">{{ displayRecordingTime }}</span>
-    </div>
-    <div class="stop-button-container">
+    <!-- Main video for the agent's stream -->
+    <video #remoteVideo id="remoteVideo" autoplay playsinline muted></video>
+<!-- webVideo -->
+ 
+    <!-- Local video preview (picture-in-picture) -->
+    <video #webVideo id="webVideo" autoplay playsinline></video>
+<!-- remoteVideo -->
+    <!-- Overlay for controls -->
+    <div class="controls-overlay">
+      <div class="recording-timer">REC {{ displayRecordingTime }}</div>
+      <ion-button color="light" (click)="swapCamera()" *ngIf="canSwapCamera" class="swap-camera-btn">
+        <ion-icon name="camera-reverse-outline"></ion-icon>
+      </ion-button>
       <ion-button color="danger" (click)="stopWebRecording()">Stop Streaming</ion-button>
     </div>
   </div>
 
   <!-- Completed UI -->
-  <div *ngIf="uiState === 'completed'" class="completed-container">
+  <div *ngIf="uiState === 'completed'" class="state-container completed-container">
     <ion-icon name="checkmark-circle-outline" class="completed-icon"></ion-icon>
     <h2>Call Completed</h2>
     <p>{{ instructionText }}</p>
@@ -55,7 +62,7 @@
   </div>
 
   <!-- Failed UI -->
-  <div *ngIf="uiState === 'failed'" class="failed-container">
+  <div *ngIf="uiState === 'failed'" class="state-container failed-container">
     <ion-icon name="alert-circle-outline" class="failed-icon"></ion-icon>
     <h2>Connection Failed</h2>
     <p>{{ instructionText }}</p>
